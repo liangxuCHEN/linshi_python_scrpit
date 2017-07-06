@@ -85,7 +85,9 @@ def output_data_sql(list_write):
 
 def input_combine_product_data():
     # 整理数据
-    df = pd.read_excel('combine_product.xls', index_col=2)
+    conn = sql.init_sql()
+    sql_text = 'SELECT skuCode, subSkuCode, id from T_Kingdee_Combine'
+    df = pd.io.sql.read_sql(sql_text, con=conn)
     return df
 
 

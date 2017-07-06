@@ -153,7 +153,7 @@ class Mssql_253:
 
 def init_sql():
     conn = pymssql.connect(
-        host=settings.HOST,
+        host=settings.HOST_253,
         user=settings.HOST_253_USER,
         password=settings.HOST_PASSWORD,
         database=settings.DB_Product,
