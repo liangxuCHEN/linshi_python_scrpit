@@ -60,7 +60,7 @@ def input_sales_data_from_db(begin_date):
     # 整理数据
     conn = sql.init_sql_253()
     sql_text = """
-    select TOP 100 distinct SkuCode,BuyUser,SUM(Qty) Qty,year(OrderAduitTime) AduitYear
+    select distinct SkuCode,BuyUser,SUM(Qty) Qty,year(OrderAduitTime) AduitYear
     from ProductDataHandle..T_Kingdee_SaleDataD
     where convert(nvarchar(7), OrderAduitTime,120) ='{begin_date}'
     and SkuCode not in (select SkuCode from  BSPRODUCTCENTER..T_PRT_AllProduct where Series in('赠品系列','配套系列'))
@@ -102,8 +102,8 @@ def main_function(filename):
     # sale data
     # df_sales = input_sales_data(filename)
     df_sales = input_sales_data_from_db(filename)
-    print df_sales.head()
-    print df_combine_product.head()
+    # print df_sales.head()
+    # print df_combine_product.head()
     user_buy_items_sum = df_sales.groupby('BuyUser').size()
     # 提出每个用户的购买列表
     index_user = 0
@@ -166,8 +166,6 @@ def main_function(filename):
                     combine_table.append((combine_code[:-1], 1, find_mix_qty(skuCode_qty_dic, clist)))
 
             print get_time(begin=start)
-            print len(combine_table)
-            exit(5)
             # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
             if len(combine_table) > 1000:
                 # 合并到数据库
@@ -214,7 +212,7 @@ def make_combine_sale_skucode_detail():
     sql.add_combine_sale_skucode_detail(combine_sale_skucode_table)
 
 if __name__ == "__main__":
-    log = log_init('2017_data.log')
+    log = log_init('2017_02_data.log')
     # combine product
     df_combine_product = input_combine_product_data()
 
@@ -226,6 +224,7 @@ if __name__ == "__main__":
     #     print child
     #     log.debug('Step to : ' + child)
     # 每月运行一次
-    main_function(time.strftime('%Y-%m', time.localtime(time.time())))
+    # main_function(time.strftime('%Y-%m', time.localtime(time.time())))
+    main_function('2017-02')
     # 最后把表中的skucode分离出来，做成一张表
     make_combine_sale_skucode_detail()
