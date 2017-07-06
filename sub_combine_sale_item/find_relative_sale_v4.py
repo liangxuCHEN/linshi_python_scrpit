@@ -227,4 +227,4 @@ if __name__ == "__main__":
     # main_function(time.strftime('%Y-%m', time.localtime(time.time())))
     main_function('2017-02')
     # 最后把表中的skucode分离出来，做成一张表
-    make_combine_sale_skucode_detail()
+    # make_combine_sale_skucode_detail()

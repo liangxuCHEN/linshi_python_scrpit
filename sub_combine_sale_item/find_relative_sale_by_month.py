@@ -111,7 +111,6 @@ def main_function(begin_date):
 
             for index_item in range(0, len(items)):
                 skuCode_qty_dic[items.iloc[index_item]['SkuCode']] = int(items.iloc[index_item]['Qty'])
-            start = get_time()
             # 生成用户商品所有组合
             if len(items) > 7:
                 max_len = 7
@@ -159,9 +158,8 @@ def main_function(begin_date):
             if len(combine_table) > 1000:
                 # 合并到数据库
                 log.info('output 1000 rows to T_DCR_CombineSaleData')
-                start = get_time()
                 sql.add_free_combine(combine_table)
-                combine_table = []
+                combine_table = list()
                 # 记录时间
 
     # 合并到数据库
@@ -178,7 +176,6 @@ def make_combine_sale_skucode_detail():
     log.info('make the T_DCR_CombineSaleSkuCodeDetail table')
     combine_sale_skucode_table = []
     for i in range(1, len(df)):
-        start = get_time()
         skucode_list = df['CombineCode'][i].split(':')
 
         if len(skucode_list) > 1:
@@ -216,8 +213,8 @@ if __name__ == "__main__":
     
     log.info('get the sale data at %s' % date_month)
     main_function(date_month)
-    # 最后把表中的skucode分离出来，做成一张表
-    log.info('finish find the subcombine sale item and save the detail table')
-    make_combine_sale_skucode_detail()
+    # TODO: 最后把表中的skucode分离出来，做成一张表, run every time
+    # log.info('finish find the subcombine sale item and save the detail table')
+    # make_combine_sale_skucode_detail()
     log.info('-----------finish all, well done !---------------------')
 
