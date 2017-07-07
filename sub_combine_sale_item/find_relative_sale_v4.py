@@ -7,6 +7,8 @@ import os
 import logging
 
 
+log = None
+
 def log_init(file_name):
     """
     logging.debug('This is debug message')
@@ -109,6 +111,7 @@ def main_function(filename):
     index_user = 0
     # 制作组合列表
     combine_table = []
+    log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
     for num_items in user_buy_items_sum:
         user = user_buy_items_sum.index[index_user]
         index_user += 1
@@ -166,6 +169,7 @@ def main_function(filename):
                     combine_table.append((combine_code[:-1], 1, find_mix_qty(skuCode_qty_dic, clist)))
 
             print get_time(begin=start)
+            log.info('finish NO.%d buyer and continue...' % index_user)
             # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
             if len(combine_table) > 1000:
                 # 合并到数据库
@@ -180,40 +184,10 @@ def main_function(filename):
     sql.add_free_combine(combine_table)
 
 
-def make_combine_sale_skucode_detail():
-    conn = sql.init_sql()
-    sql_text = "SELECT CombineCode,sum(SalesQty) SalesQty,sum(BuyUserQty) BuyUserQty FROM dbo.T_DCR_CombineSaleData" \
-               " group by CombineCode having(sum(BuyUserQty)>20)"
-    print 'In the Data Processing , please wait 1 min ....'
-    df = pd.io.sql.read_sql(sql_text, con=conn)
-
-    print 'make the T_DCR_CombineSaleSkuCodeDetail table'
-    combine_sale_skucode_table = []
-    for i in range(1, len(df)):
-        start = get_time()
-        skucode_list = df['CombineCode'][i].split(':')
-
-        if len(skucode_list) > 1:
-            for skucode in skucode_list:
-                # format : CombineCode, SalesQty, BuyUserQty, SkuCode
-                combine_sale_skucode_table.append((
-                    df['CombineCode'][i],
-                    int(df['SalesQty'][i]),
-                    int(df['BuyUserQty'][i]),
-                    skucode
-                ))
-        # when the length of table larger than 1000, it output to the sql
-        if len(combine_sale_skucode_table) > 1000:
-            sql.add_combine_sale_skucode_detail(combine_sale_skucode_table)
-            combine_sale_skucode_table = []
-
-        print get_time(begin=start)
-
-    sql.add_combine_sale_skucode_detail(combine_sale_skucode_table)
-
 if __name__ == "__main__":
-    log = log_init('2017_02_data.log')
+    log = log_init('log/2017_02_data.log')
     # combine product
+    log.info('get the combine product data')
     df_combine_product = input_combine_product_data()
 
     # 遍历指定目录，显示目录下的所有文件名
@@ -226,5 +200,7 @@ if __name__ == "__main__":
     # 每月运行一次
     # main_function(time.strftime('%Y-%m', time.localtime(time.time())))
     main_function('2017-02')
+    log.info('finish find the subcombine sale item and save the detail table')
     # 最后把表中的skucode分离出来，做成一张表
-    make_combine_sale_skucode_detail()
+    # sql.make_combine_sale_skucode_detail(log)
+    log.info('-----------finish all, well done !---------------------')

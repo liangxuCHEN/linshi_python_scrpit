@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pymssql
 import settings
-
+import pandas as pd
 
 """
 use pymssql connect to the sql server
@@ -283,8 +283,44 @@ def add_free_combine(combine_table):
 
 def add_combine_sale_skucode_detail(combine_table):
     conn = Mssql()
-    sql_text = "insert into T_DCR_CombineSaleSkuCodeDetail values (%s,%d,%d,%s)"
+    sql_text = "insert into T_DCR_CombineSaleSkuCodeDetail values (%s,%d,%d,%s,%s)"
     conn.exec_many_query(sql_text, combine_table)
+
+
+def make_combine_sale_skucode_detail(log):
+    conn = init_sql()
+    sql_text = "SELECT CombineCode,sum(SalesQty) SalesQty,sum(BuyUserQty) BuyUserQty FROM dbo.T_DCR_CombineSaleData" \
+               " group by CombineCode having(sum(BuyUserQty)>20)"
+    log.info('In the Data Processing , please wait 1 min ....')
+    df = pd.io.sql.read_sql(sql_text, con=conn)
+
+    log.info('make the T_DCR_CombineSaleSkuCodeDetail table')
+    combine_sale_skucode_table = []
+    combine_no = 1
+    for i in range(1, len(df)):
+        skucode_list = df['CombineCode'][i].split(':')
+
+        if len(skucode_list) > 1:
+            for skucode in skucode_list:
+                # format : CombineCode, SalesQty, BuyUserQty, SkuCode
+                combine_sale_skucode_table.append((
+                    df['CombineCode'][i],
+                    int(df['SalesQty'][i]),
+                    int(df['BuyUserQty'][i]),
+                    skucode,
+                    'QZZH%d' % combine_no
+                ))
+
+            # combine_no auto add 1
+            combine_no += 1
+        # when the length of table larger than 1000, it output to the sql
+        if len(combine_sale_skucode_table) > 1000:
+            log.info('output 1000 rows to T_DCR_CombineSaleSkuCodeDetail')
+            add_combine_sale_skucode_detail(combine_sale_skucode_table)
+            combine_sale_skucode_table = []
+
+
+    add_combine_sale_skucode_detail(combine_sale_skucode_table)
 
 
 if __name__ == "__main__":

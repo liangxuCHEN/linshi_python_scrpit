@@ -168,37 +168,6 @@ def main_function(begin_date):
     sql.add_free_combine(combine_table)
 
 
-def make_combine_sale_skucode_detail():
-    conn = sql.init_sql()
-    sql_text = "SELECT CombineCode,sum(SalesQty) SalesQty,sum(BuyUserQty) BuyUserQty FROM dbo.T_DCR_CombineSaleData" \
-               " group by CombineCode having(sum(BuyUserQty)>20)"
-    log.info('In the Data Processing , please wait 1 min ....')
-    df = pd.io.sql.read_sql(sql_text, con=conn)
-
-    log.info('make the T_DCR_CombineSaleSkuCodeDetail table')
-    combine_sale_skucode_table = []
-    for i in range(1, len(df)):
-        start = get_time()
-        skucode_list = df['CombineCode'][i].split(':')
-
-        if len(skucode_list) > 1:
-            for skucode in skucode_list:
-                # format : CombineCode, SalesQty, BuyUserQty, SkuCode
-                combine_sale_skucode_table.append((
-                    df['CombineCode'][i],
-                    int(df['SalesQty'][i]),
-                    int(df['BuyUserQty'][i]),
-                    skucode
-                ))
-        # when the length of table larger than 1000, it output to the sql
-        if len(combine_sale_skucode_table) > 1000:
-            log.info('output 1000 rows to T_DCR_CombineSaleSkuCodeDetail')
-            sql.add_combine_sale_skucode_detail(combine_sale_skucode_table)
-            combine_sale_skucode_table = []
-
-
-    sql.add_combine_sale_skucode_detail(combine_sale_skucode_table)
-
 if __name__ == "__main__":
     # 每个月的第一天计算前一个月的潜在销售组合
     x = time.localtime(time.time())
@@ -218,6 +187,6 @@ if __name__ == "__main__":
     main_function(date_month)
     # 最后把表中的skucode分离出来，做成一张表
     log.info('finish find the subcombine sale item and save the detail table')
-    make_combine_sale_skucode_detail()
+    # sql.make_combine_sale_skucode_detail(log)
     log.info('-----------finish all, well done !---------------------')
 
