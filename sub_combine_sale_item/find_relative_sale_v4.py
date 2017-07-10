@@ -185,10 +185,10 @@ def main_function(filename):
 
 
 if __name__ == "__main__":
-    log = log_init('log/2017_02_data.log')
+    log = log_init('log/combin_2017_07_10.log')
     # combine product
     log.info('get the combine product data')
-    df_combine_product = input_combine_product_data()
+    #df_combine_product = input_combine_product_data()
 
     # 遍历指定目录，显示目录下的所有文件名
     # filename = '2017_sale_data'
@@ -199,8 +199,8 @@ if __name__ == "__main__":
     #     log.debug('Step to : ' + child)
     # 每月运行一次
     # main_function(time.strftime('%Y-%m', time.localtime(time.time())))
-    main_function('2017-02')
-    log.info('finish find the subcombine sale item and save the detail table')
+    #main_function('2017-02')
+    #log.info('finish find the subcombine sale item and save the detail table')
     # 最后把表中的skucode分离出来，做成一张表
-    # sql.make_combine_sale_skucode_detail(log)
+    sql.make_combine_sale_skucode_detail(log)
     log.info('-----------finish all, well done !---------------------')

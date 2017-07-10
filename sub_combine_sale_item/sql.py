@@ -289,7 +289,7 @@ def add_combine_sale_skucode_detail(combine_table):
 
 def make_combine_sale_skucode_detail(log):
     conn = init_sql()
-    sql_text = "SELECT CombineCode,sum(SalesQty) SalesQty,sum(BuyUserQty) BuyUserQty FROM dbo.T_DCR_CombineSaleData" \
+    sql_text = "SELECT CombineCode,sum(SalesQty) SalesQty,sum(BuyUserQty) BuyUserQty FROM dbo.T_DCR_CombineSaleData (nolock)" \
                " group by CombineCode having(sum(BuyUserQty)>20)"
     log.info('In the Data Processing , please wait 1 min ....')
     df = pd.io.sql.read_sql(sql_text, con=conn)
@@ -331,6 +331,6 @@ if __name__ == "__main__":
     #update_hot_shop_plan(data)
     #res = combine_item_to_sql(data)
     #print get_sale_data_by_user('磊yoyo')
-    #combine_item_to_T_Kingdee_Combine(data)
+    
     print 'End'
 
