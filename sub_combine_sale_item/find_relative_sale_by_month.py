@@ -3,10 +3,13 @@ import pandas as pd
 import itertools
 import time
 import sql
-import os
 import logging
 
 log = None
+MAX_ITEM = 7
+
+BEGIN_USER_NO = 1331
+
 
 def log_init(file_name):
     """
@@ -66,18 +69,18 @@ def input_sales_data_from_db(begin_date):
 
 def find_product_combine_items(df_data, item_code):
     res = df_data[df_data['ItemCode'] == item_code]
-    if len(res)>1:
+    if len(res) > 1:
         combine_item_list = {}
         sku_code_list = []
-        for i in range(0,len(res)):
-            res_item = df_data[df_data['SkuCode']==res.iloc[i]['SkuCode']]
+        for i in range(0, len(res)):
+            res_item = df_data[df_data['SkuCode'] == res.iloc[i]['SkuCode']]
             for i_item in range(0, len(res_item)):
                 if res_item.iloc[i_item]['SkuCode'] not in sku_code_list:
                     sku_code_list.append(res_item.iloc[i_item]['SkuCode'])
                     combine_item_list[res_item.iloc[i_item]['SkuCode']] = [res_item.iloc[i_item]['ItemCode']]
                 else:
                     combine_item_list[res_item.iloc[i_item]['SkuCode']].append(res_item.iloc[i_item]['ItemCode'])
-        return  combine_item_list
+        return combine_item_list
     else:
         return None
 
@@ -101,6 +104,9 @@ def main_function(begin_date):
     combine_table = []
     log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
     for num_items in user_buy_items_sum:
+        if index_user < BEGIN_USER_NO:
+            index_user += 1
+            continue
         user = user_buy_items_sum.index[index_user]
         index_user += 1
         items = df_sales[df_sales['BuyUser'] == user]
@@ -112,10 +118,11 @@ def main_function(begin_date):
             for index_item in range(0, len(items)):
                 skuCode_qty_dic[items.iloc[index_item]['SkuCode']] = int(items.iloc[index_item]['Qty'])
             # 生成用户商品所有组合
-            if len(items) > 7:
-                max_len = 7
+            if len(items) > MAX_ITEM:
+                max_len = MAX_ITEM
             else:
                 max_len = len(items)
+
             combine_list = []
             for i in range(1, max_len):
                 tmp_list = list(itertools.combinations(items['SkuCode'], i + 1))
@@ -150,8 +157,12 @@ def main_function(begin_date):
                     # 制作组合标识编码
                     for sub_item in clist:
                         combine_code += sub_item + ':'
-                    # format : combine code , buy user qty = 1, sales qty
-                    combine_table.append((combine_code[:-1], 1, find_mix_qty(skuCode_qty_dic, clist)))
+
+                    combine_table.append({
+                        'CombineCode': combine_code[:-1],
+                        'BuyUserQty': 1,
+                        'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
+                    })
 
             log.info('finish NO.%d buyer and continue...' % index_user)
             # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
@@ -159,8 +170,9 @@ def main_function(begin_date):
                 # 合并到数据库
                 log.info('output 1000 rows to T_DCR_CombineSaleData')
                 try:
-                    sql.add_free_combine(combine_table)
-                    combine_table = list()
+                    sql.add_free_combine(combine_table, log)
+                    # 清空列表
+                    del combine_table[:]
                 except Exception as e:
                     log.error('-----error---------')
                     log.error(e)
@@ -168,7 +180,8 @@ def main_function(begin_date):
                 # 记录时间
 
     # 合并到数据库
-    sql.add_free_combine(combine_table)
+    if len(combine_table) > 0:
+        sql.add_free_combine(combine_table, log)
 
 
 if __name__ == "__main__":
@@ -185,7 +198,6 @@ if __name__ == "__main__":
     log.info('get the combine product data')
     df_combine_product = input_combine_product_data()
 
-    
     log.info('get the sale data at %s' % date_month)
     main_function(date_month)
     # 最后把表中的skucode分离出来，做成一张表

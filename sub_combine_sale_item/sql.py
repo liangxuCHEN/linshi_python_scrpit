@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 import pymssql
 import settings
+import sqlalchemy
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, bindparam
 import pandas as pd
 
 """
@@ -275,10 +279,11 @@ def get_sale_data_by_user(user_name):
         return None
 
 
-def add_free_combine(combine_table):
-    conn = Mssql()
-    sql_text = "insert into T_DCR_CombineSaleData values (%s,%d,%d)"
-    conn.exec_many_query(sql_text, combine_table)
+def add_free_combine(combine_table, log):
+    # conn = Mssql()
+    # sql_text = "insert into T_DCR_CombineSaleData values (%s,%d,%d)"
+    # conn.exec_many_query(sql_text, combine_table)
+    insert_data('T_DCR_CombineSaleData', combine_table, log)
 
 
 def add_combine_sale_skucode_detail(combine_table):
@@ -321,6 +326,39 @@ def make_combine_sale_skucode_detail(log):
 
 
     add_combine_sale_skucode_detail(combine_sale_skucode_table)
+
+
+def init_connection(table):
+    # 'mysql://uid:pwd@localhost/mydb?charset=utf8'
+    engine = create_engine('mssql+pymssql://%s:%s@%s/%s?charset=utf8' % (
+        settings.HOST_USER,
+        settings.HOST_PASSWORD,
+        settings.HOST,
+        settings.DB
+    ), poolclass=NullPool)
+
+    connection = engine.connect()
+    metadata = sqlalchemy.schema.MetaData(bind=engine, reflect=True)
+    table_schema = sqlalchemy.Table(table, metadata, autoload=True)
+    return engine, connection, table_schema
+
+
+def insert_data(table_name, insert_list, log):
+    log.info('Saving the data.....')
+    engine, connection, table_schema = init_connection(table_name)
+    # 创建Session:
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        connection.execute(table_schema.insert(), insert_list)
+        session.commit()
+    except Exception as e:
+        log.error('Having error during the saving....')
+        log.error(e)
+    finally:
+        session.close()
+        connection.close()
 
 
 if __name__ == "__main__":
