@@ -336,17 +336,17 @@ def init_connection(table):
         settings.HOST,
         settings.DB
     ))
-
+    # 这个几个要做全局变量，如果不断创建会形成内存泄漏
     connection = engine.connect()
     metadata = sqlalchemy.schema.MetaData(bind=engine, reflect=True)
     table_schema = sqlalchemy.Table(table, metadata, autoload=True)
-    return engine, connection, table_schema
+    Session = sessionmaker(bind=engine)
+    return engine, connection, table_schema, Session
 
 
-def insert_data(engine, connection, table_schema, insert_list, log):
+def insert_data(engine, connection, table_schema, Session, insert_list, log):
     log.info('Saving the data.....')
     # 创建Session:
-    Session = sessionmaker(bind=engine)
     session = Session()
 
     try:

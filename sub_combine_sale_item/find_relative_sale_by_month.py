@@ -10,7 +10,7 @@ import gc
 log = None
 MAX_ITEM = 7
 
-BEGIN_USER_NO = 12210
+BEGIN_USER_NO = 12583
 
 
 def log_init(file_name):
@@ -66,6 +66,8 @@ def input_sales_data_from_db(begin_date):
     group by SkuCode,BuyUser,year(OrderAduitTime)
     """.format(begin_date=begin_date)
     df = pd.io.sql.read_sql(sql_text, con=conn)
+    # df.to_excel('file/%s.xls' % begin_date)
+    # exit(5)
     return df
 
 
@@ -98,7 +100,7 @@ def find_mix_qty(qty_dic, item_list):
 def main_function(begin_date):
     global df_combine_product
     # 数据库连接初始化
-    engine, connection, table_schema = sql.init_connection('T_DCR_CombineSaleData')
+    # engine, connection, table_schema, Session = sql.init_connection('T_DCR_CombineSaleData')
     # sale data
     df_sales = input_sales_data_from_db(begin_date)
     user_buy_items_sum = df_sales.groupby('BuyUser').size()
@@ -162,11 +164,13 @@ def main_function(begin_date):
                     for sub_item in clist:
                         combine_code += sub_item + ':'
 
-                    combine_table.append({
-                        'CombineCode': combine_code[:-1],
-                        'BuyUserQty': 1,
-                        'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
-                    })
+                    # combine_table.append({
+                    #     'CombineCode': combine_code[:-1],
+                    #     'BuyUserQty': 1,
+                    #     'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
+                    # })
+                    # format : combine code , buy user qty = 1, sales qty
+                    combine_table.append((combine_code[:-1], 1, find_mix_qty(skuCode_qty_dic, clist)))
 
             log.info('finish NO.%d buyer and continue...' % index_user)
             # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
@@ -174,7 +178,8 @@ def main_function(begin_date):
                 # 合并到数据库
                 log.info('output 1000 rows to T_DCR_CombineSaleData')
                 try:
-                    sql.insert_data(engine, connection, table_schema, combine_table, log)
+                    # sql.insert_data(engine, connection, table_schema, Session, combine_table, log)
+                    sql.add_free_combine(combine_table)
                     # 清空列表
                     combine_table = []
                     gc.collect()
@@ -186,7 +191,8 @@ def main_function(begin_date):
 
     # 合并到数据库
     if len(combine_table) > 0:
-        sql.insert_data(engine, connection, table_schema, combine_table, log)
+        sql.add_free_combine(combine_table)
+        # sql.insert_data(engine, connection, table_schema, Session, combine_table, log)
 
 
 if __name__ == "__main__":
