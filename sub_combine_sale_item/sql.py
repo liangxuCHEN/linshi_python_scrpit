@@ -341,10 +341,10 @@ def init_connection(table):
     metadata = sqlalchemy.schema.MetaData(bind=engine, reflect=True)
     table_schema = sqlalchemy.Table(table, metadata, autoload=True)
     Session = sessionmaker(bind=engine)
-    return engine, connection, table_schema, Session
+    return connection, table_schema, Session
 
 
-def insert_data(engine, connection, table_schema, Session, insert_list, log):
+def insert_data(connection, table_schema, Session, insert_list, log):
     log.info('Saving the data.....')
     # 创建Session:
     session = Session()

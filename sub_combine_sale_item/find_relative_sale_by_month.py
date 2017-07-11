@@ -8,9 +8,9 @@ import gc
 
 
 log = None
-MAX_ITEM = 7
+MAX_ITEM = 6
 
-BEGIN_USER_NO = 12583
+BEGIN_USER_NO = 12723
 
 
 def log_init(file_name):
@@ -57,16 +57,19 @@ def input_sales_data(filename):
 # 从数据库里面取数据
 def input_sales_data_from_db(begin_date):
     # 整理数据
-    conn = sql.init_sql_253()
-    sql_text = """
-    select distinct SkuCode,BuyUser,SUM(Qty) Qty,year(OrderAduitTime) AduitYear
-    from ProductDataHandle..T_Kingdee_SaleDataD
-    where convert(nvarchar(7), OrderAduitTime,120) ='{begin_date}'
-    and SkuCode not in (select SkuCode from  BSPRODUCTCENTER..T_PRT_AllProduct where Series in('赠品系列','配套系列'))
-    group by SkuCode,BuyUser,year(OrderAduitTime)
-    """.format(begin_date=begin_date)
-    df = pd.io.sql.read_sql(sql_text, con=conn)
-    # df.to_excel('file/%s.xls' % begin_date)
+    try:
+        df = pd.read_csv('file/%s.csv' % begin_date)
+    except:
+        conn = sql.init_sql_253()
+        sql_text = """
+        select distinct SkuCode,BuyUser,SUM(Qty) Qty,year(OrderAduitTime) AduitYear
+        from ProductDataHandle..T_Kingdee_SaleDataD
+        where convert(nvarchar(7), OrderAduitTime,120) ='{begin_date}'
+        and SkuCode not in (select SkuCode from  BSPRODUCTCENTER..T_PRT_AllProduct where Series in('赠品系列','配套系列'))
+        group by SkuCode,BuyUser,year(OrderAduitTime)
+        """.format(begin_date=begin_date)
+        df = pd.io.sql.read_sql(sql_text, con=conn)
+        df.to_csv('file/%s.csv' % begin_date, encoding="utf8")
     # exit(5)
     return df
 
@@ -100,23 +103,19 @@ def find_mix_qty(qty_dic, item_list):
 def main_function(begin_date):
     global df_combine_product
     # 数据库连接初始化
-    # engine, connection, table_schema, Session = sql.init_connection('T_DCR_CombineSaleData')
+    connection, table_schema, Session = sql.init_connection('T_DCR_CombineSaleData')
     # sale data
     df_sales = input_sales_data_from_db(begin_date)
     user_buy_items_sum = df_sales.groupby('BuyUser').size()
     # 提出每个用户的购买列表
-    index_user = 0
+    # index_user = 0
     # 制作组合列表
-    combine_table = []
+    combine_table = list()
     log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
-    for num_items in user_buy_items_sum:
-        if index_user < BEGIN_USER_NO:
-            index_user += 1
-            continue
-        user = user_buy_items_sum.index[index_user]
-        index_user += 1
-        items = df_sales[df_sales['BuyUser'] == user]
+    for index_user in range(BEGIN_USER_NO, len(user_buy_items_sum)):
 
+        items = df_sales[df_sales['BuyUser'] == user_buy_items_sum.index[index_user]]
+        num_items = user_buy_items_sum[index_user]
         if num_items > 1:
             # 存储产品对应的购买数量
             skuCode_qty_dic = {}
@@ -159,18 +158,19 @@ def main_function(begin_date):
                             break
 
                 if not in_product_list:
-                    combine_code = ''
                     # 制作组合标识编码
-                    for sub_item in clist:
-                        combine_code += sub_item + ':'
+                    combine_code = ':'.join(clist)
+                    #combine_table.append((combine_code, 1, find_mix_qty(skuCode_qty_dic, clist)))
 
-                    # combine_table.append({
-                    #     'CombineCode': combine_code[:-1],
-                    #     'BuyUserQty': 1,
-                    #     'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
-                    # })
+                    # for sub_item in clist:
+                    #     combine_code += sub_item + ':'
+
+                    combine_table.append({
+                        'CombineCode': combine_code[:-1],
+                        'BuyUserQty': 1,
+                        'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
+                    })
                     # format : combine code , buy user qty = 1, sales qty
-                    combine_table.append((combine_code[:-1], 1, find_mix_qty(skuCode_qty_dic, clist)))
 
             log.info('finish NO.%d buyer and continue...' % index_user)
             # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
@@ -178,10 +178,10 @@ def main_function(begin_date):
                 # 合并到数据库
                 log.info('output 1000 rows to T_DCR_CombineSaleData')
                 try:
-                    # sql.insert_data(engine, connection, table_schema, Session, combine_table, log)
-                    sql.add_free_combine(combine_table)
+                    sql.insert_data(connection, table_schema, Session, combine_table, log)
+                    # sql.add_free_combine(combine_table)
                     # 清空列表
-                    combine_table = []
+                    combine_table = list()
                     gc.collect()
                 except Exception as e:
                     log.error('-----error---------')
@@ -191,8 +191,8 @@ def main_function(begin_date):
 
     # 合并到数据库
     if len(combine_table) > 0:
-        sql.add_free_combine(combine_table)
-        # sql.insert_data(engine, connection, table_schema, Session, combine_table, log)
+        # sql.add_free_combine(combine_table)
+        sql.insert_data(connection, table_schema, Session, combine_table, log)
 
 
 if __name__ == "__main__":
