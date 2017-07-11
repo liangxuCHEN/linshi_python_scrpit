@@ -279,11 +279,11 @@ def get_sale_data_by_user(user_name):
         return None
 
 
-def add_free_combine(combine_table, log):
-    # conn = Mssql()
-    # sql_text = "insert into T_DCR_CombineSaleData values (%s,%d,%d)"
-    # conn.exec_many_query(sql_text, combine_table)
-    insert_data('T_DCR_CombineSaleData', combine_table, log)
+def add_free_combine(combine_table):
+    conn = Mssql()
+    sql_text = "insert into T_DCR_CombineSaleData values (%s,%d,%d)"
+    conn.exec_many_query(sql_text, combine_table)
+    # insert_data('T_DCR_CombineSaleData', combine_table, log)
 
 
 def add_combine_sale_skucode_detail(combine_table):
@@ -335,7 +335,7 @@ def init_connection(table):
         settings.HOST_PASSWORD,
         settings.HOST,
         settings.DB
-    ), poolclass=NullPool)
+    ))
 
     connection = engine.connect()
     metadata = sqlalchemy.schema.MetaData(bind=engine, reflect=True)
@@ -343,22 +343,24 @@ def init_connection(table):
     return engine, connection, table_schema
 
 
-def insert_data(table_name, insert_list, log):
+def insert_data(engine, connection, table_schema, insert_list, log):
     log.info('Saving the data.....')
-    engine, connection, table_schema = init_connection(table_name)
     # 创建Session:
     Session = sessionmaker(bind=engine)
     session = Session()
 
     try:
+        print 'execute sql'
         connection.execute(table_schema.insert(), insert_list)
+        print 'commit'
         session.commit()
+        print 'finish'
     except Exception as e:
         log.error('Having error during the saving....')
         log.error(e)
     finally:
+        print 'close'
         session.close()
-        connection.close()
 
 
 if __name__ == "__main__":

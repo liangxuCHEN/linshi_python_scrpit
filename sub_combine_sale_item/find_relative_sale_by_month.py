@@ -8,7 +8,7 @@ import logging
 log = None
 MAX_ITEM = 7
 
-BEGIN_USER_NO = 1331
+BEGIN_USER_NO = 11968
 
 
 def log_init(file_name):
@@ -95,6 +95,8 @@ def find_mix_qty(qty_dic, item_list):
 
 def main_function(begin_date):
     global df_combine_product
+    # 数据库连接初始化
+    engine, connection, table_schema = sql.init_connection('T_DCR_CombineSaleData')
     # sale data
     df_sales = input_sales_data_from_db(begin_date)
     user_buy_items_sum = df_sales.groupby('BuyUser').size()
@@ -170,9 +172,9 @@ def main_function(begin_date):
                 # 合并到数据库
                 log.info('output 1000 rows to T_DCR_CombineSaleData')
                 try:
-                    sql.add_free_combine(combine_table, log)
+                    sql.insert_data(engine, connection, table_schema, combine_table, log)
                     # 清空列表
-                    del combine_table[:]
+                    combine_table = []
                 except Exception as e:
                     log.error('-----error---------')
                     log.error(e)
@@ -181,14 +183,14 @@ def main_function(begin_date):
 
     # 合并到数据库
     if len(combine_table) > 0:
-        sql.add_free_combine(combine_table, log)
+        sql.insert_data(engine, connection, table_schema, combine_table, log)
 
 
 if __name__ == "__main__":
     # 每个月的第一天计算前一个月的潜在销售组合
     x = time.localtime(time.time())
     if x.tm_mon-1 < 10:
-        month = '0'+str(x.tm_mon-4)
+        month = '0'+str(x.tm_mon-3)
     else:
         month = str(x.tm_mon-1)
     date_month = '{year}-{month}'.format(year=x.tm_year, month=month)
