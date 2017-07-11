@@ -4,11 +4,13 @@ import itertools
 import time
 import sql
 import logging
+import gc
+
 
 log = None
 MAX_ITEM = 7
 
-BEGIN_USER_NO = 11968
+BEGIN_USER_NO = 12210
 
 
 def log_init(file_name):
@@ -175,6 +177,7 @@ def main_function(begin_date):
                     sql.insert_data(engine, connection, table_schema, combine_table, log)
                     # 清空列表
                     combine_table = []
+                    gc.collect()
                 except Exception as e:
                     log.error('-----error---------')
                     log.error(e)
