@@ -350,16 +350,12 @@ def insert_data(connection, table_schema, Session, insert_list, log):
     session = Session()
 
     try:
-        print 'execute sql'
         connection.execute(table_schema.insert(), insert_list)
-        print 'commit'
         session.commit()
-        print 'finish'
     except Exception as e:
         log.error('Having error during the saving....')
         log.error(e)
     finally:
-        print 'close'
         session.close()
 
 

@@ -170,24 +170,25 @@ def main_function(begin_date):
                         'BuyUserQty': 1,
                         'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
                     })
+                    # print len(combine_table)
                     # format : combine code , buy user qty = 1, sales qty
 
+                    # 超过1000条数据，就更新一次数据库
+                    if len(combine_table) > 20000:
+                        # 合并到数据库
+                        log.info('output 1000 rows to T_DCR_CombineSaleData')
+                        try:
+                            sql.insert_data(connection, table_schema, Session, combine_table, log)
+                            # sql.add_free_combine(combine_table)
+                            # 清空列表
+                            combine_table = list()
+                            gc.collect()
+                        except Exception as e:
+                            log.error('-----error---------')
+                            log.error(e)
+                            log.info('continue .....')
+
             log.info('finish NO.%d buyer and continue...' % index_user)
-            # 每完成一个用户判断一次，超过1000条数据，就更新一次数据库
-            if len(combine_table) > 1000:
-                # 合并到数据库
-                log.info('output 1000 rows to T_DCR_CombineSaleData')
-                try:
-                    sql.insert_data(connection, table_schema, Session, combine_table, log)
-                    # sql.add_free_combine(combine_table)
-                    # 清空列表
-                    combine_table = list()
-                    gc.collect()
-                except Exception as e:
-                    log.error('-----error---------')
-                    log.error(e)
-                    log.info('continue .....')
-                # 记录时间
 
     # 合并到数据库
     if len(combine_table) > 0:
