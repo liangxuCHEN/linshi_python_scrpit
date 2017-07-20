@@ -2,14 +2,20 @@
 import pymssql
 import settings
 import sqlalchemy
-from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, bindparam
 import pandas as pd
+from pymongo import MongoClient
 
 """
 use pymssql connect to the sql server
 """
+MIN_SALE = 2
+
+
+def init_mongo_sql():
+    conn = MongoClient(settings.MONGO_HOST, 27017)
+    return conn
 
 
 class Mssql:
@@ -300,6 +306,7 @@ def make_combine_sale_skucode_detail(log):
     df = pd.io.sql.read_sql(sql_text, con=conn)
 
     log.info('make the T_DCR_CombineSaleSkuCodeDetail table')
+
     combine_sale_skucode_table = []
     combine_no = 1
     for i in range(1, len(df)):
@@ -324,8 +331,8 @@ def make_combine_sale_skucode_detail(log):
             add_combine_sale_skucode_detail(combine_sale_skucode_table)
             combine_sale_skucode_table = []
 
-
-    add_combine_sale_skucode_detail(combine_sale_skucode_table)
+    if len(combine_sale_skucode_table) > 0:
+        add_combine_sale_skucode_detail(combine_sale_skucode_table)
 
 
 def init_connection(table):
@@ -359,14 +366,67 @@ def insert_data(connection, table_schema, Session, insert_list, log):
         session.close()
 
 
+def insert_data_mongo(data, log):
+    log.info('Saving the data.....')
+    conn = init_mongo_sql()
+    sub_combine_sale = conn.DCR.sub_combine_sale
+    try:
+        sub_combine_sale.insert(data)
+    except Exception as e:
+        log.error('Having error during the saving....')
+        log.error(e)
+    finally:
+        conn.close()
+
+
+def make_combine_sale_detail_mongo(log):
+    log.info('loading the data.....')
+    conn = init_mongo_sql()
+    sub_combine_sale = conn.DCR.sub_combine_sale
+    cursor = sub_combine_sale.aggregate(
+        [
+            {'$group': {
+                '_id': "$CombineCode",
+                'SalesQty': {"$sum": "$SalesQty"},
+                'BuyUserQty': {"$sum": "$BuyUserQty"}
+            }},
+            {'$match': {'SalesQty': {'$gt': MIN_SALE}}}
+        ]
+    )
+    log.info('make the T_DCR_CombineSaleSkuCodeDetail table')
+    combine_sale_skucode_table = []
+    combine_no = 1
+    for data in cursor:
+        skucode_list = data['_id'].split(':')
+
+        if len(skucode_list) > 1:
+            for skucode in skucode_list:
+                # format : CombineCode, SalesQty, BuyUserQty, SkuCode
+                combine_sale_skucode_table.append((
+                    data['_id'],
+                    data['SalesQty'],
+                    data['BuyUserQty'],
+                    skucode,
+                    'QZZH%d' % combine_no
+                ))
+
+            # combine_no auto add 1
+            combine_no += 1
+        # when the length of table larger than 1000, it output to the sql
+        if len(combine_sale_skucode_table) > 1000:
+            log.info('output 1000 rows to T_DCR_CombineSaleSkuCodeDetail')
+            add_combine_sale_skucode_detail(combine_sale_skucode_table)
+            combine_sale_skucode_table = []
+
+    print combine_sale_skucode_table
+    exit(5)
+    if len(combine_sale_skucode_table) > 0:
+        add_combine_sale_skucode_detail(combine_sale_skucode_table)
+
+
 if __name__ == "__main__":
     print 'begin'
-    #data = {'RecordType': 1, 'CategoryURL': u'http://item.taobao.com/item.htm?id=538834474818', 'CategoryId': '1121', 'CategoryName': u'\u987e\u5bb6\u5bb6\u5c45\u65d7\u8230\u5e97', 'RecordDate': "20170101"}
-    #make_hot_sale_plan(data)
-    #data = {'sku_code': '1121', 'item_code': "201701"}
-    #update_hot_shop_plan(data)
-    #res = combine_item_to_sql(data)
-    #print get_sale_data_by_user('磊yoyo')
+    #make_combine_sale_detail_mongo('xx')
     
     print 'End'
 

@@ -9,8 +9,8 @@ import gc
 
 log = None
 MAX_ITEM = 5
-
-BEGIN_USER_NO = 21043
+#21043
+BEGIN_USER_NO = 21044
 
 
 def log_init(file_name):
@@ -103,7 +103,7 @@ def find_mix_qty(qty_dic, item_list):
 def main_function(begin_date):
     global df_combine_product
     # 数据库连接初始化
-    connection, table_schema, Session = sql.init_connection('T_DCR_CombineSaleData')
+    # connection, table_schema, Session = sql.init_connection('T_DCR_CombineSaleData')
     # sale data
     df_sales = input_sales_data_from_db(begin_date)
     user_buy_items_sum = df_sales.groupby('BuyUser').size()
@@ -111,6 +111,8 @@ def main_function(begin_date):
     # index_user = 0
     # 制作组合列表
     combine_table = list()
+    # 暂停垃圾回收计数
+    gc.disable()
     log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
     for index_user in range(BEGIN_USER_NO, len(user_buy_items_sum)):
 
@@ -174,11 +176,12 @@ def main_function(begin_date):
                     # format : combine code , buy user qty = 1, sales qty
 
                     # 超过1000条数据，就更新一次数据库
-                    if len(combine_table) > 5000:
+                    if len(combine_table) > 3000:
                         # 合并到数据库
-                        log.info('output 5000 rows to T_DCR_CombineSaleData')
+                        log.info('output 3000 rows to T_DCR_CombineSaleData')
                         try:
-                            sql.insert_data(connection, table_schema, Session, combine_table, log)
+                            #sql.insert_data(connection, table_schema, Session, combine_table, log)
+                            sql.insert_data_mongo(combine_table, log)
                             # sql.add_free_combine(combine_table)
                             # 清空列表
                             combine_table = list()
@@ -192,9 +195,11 @@ def main_function(begin_date):
             log.info('finish NO.%d buyer and continue...' % index_user)
 
     # 合并到数据库
+    gc.enable()
     if len(combine_table) > 0:
         # sql.add_free_combine(combine_table)
-        sql.insert_data(connection, table_schema, Session, combine_table, log)
+        # sql.insert_data(connection, table_schema, Session, combine_table, log)
+        sql.insert_data_mongo(combine_table, log)
 
 
 if __name__ == "__main__":

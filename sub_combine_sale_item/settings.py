@@ -8,3 +8,5 @@ DB_Test = 'SoucesDeal'
 HOST_252 = '192.168.1.253:1433'
 HOST_252_USER = 'BS-Prt'
 DB_Product = 'ProductDataHandle'
+
+MONGO_HOST = '192.168.3.172'
