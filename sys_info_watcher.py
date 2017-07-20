@@ -32,10 +32,10 @@ if __name__ == '__main__':
     # print ('直接打印内存占用： ' + (str)(psutil.virtual_memory))
 
     # 打印内存的占用率
-    log.info('获取内存占用率： ' + str(psutil.virtual_memory().percent) + '%')
+    log.info('memory :' + str(psutil.virtual_memory().percent) + '%')
 
     # 本机cpu的总占用率
-    log.info('打印本机cpu占用率： ' + str(psutil.cpu_percent(0)) + '%')
+    log.info('cpu :' + str(psutil.cpu_percent(0)) + '%')
 
     # 该进程所占cpu的使用率
     # print (" 打印该进程CPU占用率: " + (str)(p1.cpu_percent(None)) + "%")
