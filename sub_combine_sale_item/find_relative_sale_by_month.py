@@ -8,9 +8,9 @@ import gc
 
 
 log = None
-MAX_ITEM = 6
+MAX_ITEM = 5
 
-BEGIN_USER_NO = 12723
+BEGIN_USER_NO = 21043
 
 
 def log_init(file_name):
@@ -174,15 +174,16 @@ def main_function(begin_date):
                     # format : combine code , buy user qty = 1, sales qty
 
                     # 超过1000条数据，就更新一次数据库
-                    if len(combine_table) > 20000:
+                    if len(combine_table) > 5000:
                         # 合并到数据库
-                        log.info('output 1000 rows to T_DCR_CombineSaleData')
+                        log.info('output 5000 rows to T_DCR_CombineSaleData')
                         try:
                             sql.insert_data(connection, table_schema, Session, combine_table, log)
                             # sql.add_free_combine(combine_table)
                             # 清空列表
                             combine_table = list()
                             gc.collect()
+                            log.info('finish saving ...')
                         except Exception as e:
                             log.error('-----error---------')
                             log.error(e)
