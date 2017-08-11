@@ -8,9 +8,9 @@ import gc
 
 
 log = None
-MAX_ITEM = 5
-#21043
-BEGIN_USER_NO = 21044
+MAX_ITEM = 6
+
+BEGIN_USER_NO = 1334
 
 
 def log_init(file_name):
@@ -111,16 +111,7 @@ def main_function(begin_date):
     # index_user = 0
     # 制作组合列表
     combine_table = list()
-    # 暂停垃圾回收计数
-    gc.disable()
     log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
-    for num_items in user_buy_items_sum:
-        if index_user < 1024:
-            index_user += 1
-            continue
-        user = user_buy_items_sum.index[index_user]
-        index_user += 1
-        items = df_sales[df_sales['BuyUser'] == user]
     for index_user in range(BEGIN_USER_NO, len(user_buy_items_sum)):
 
         items = df_sales[df_sales['BuyUser'] == user_buy_items_sum.index[index_user]]
@@ -169,16 +160,16 @@ def main_function(begin_date):
                 if not in_product_list:
                     # 制作组合标识编码
                     combine_code = ':'.join(clist)
-                    #combine_table.append((combine_code, 1, find_mix_qty(skuCode_qty_dic, clist)))
+                    combine_table.append((combine_code, 1, find_mix_qty(skuCode_qty_dic, clist)))
 
                     # for sub_item in clist:
                     #     combine_code += sub_item + ':'
 
-                    combine_table.append({
-                        'CombineCode': combine_code[:-1],
-                        'BuyUserQty': 1,
-                        'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
-                    })
+                    #combine_table.append({
+                    #    'CombineCode': combine_code[:-1],
+                    #    'BuyUserQty': 1,
+                    #    'SalesQty': find_mix_qty(skuCode_qty_dic, clist)
+                    #})
                     # print len(combine_table)
                     # format : combine code , buy user qty = 1, sales qty
 
@@ -187,13 +178,11 @@ def main_function(begin_date):
                         # 合并到数据库
                         log.info('output 3000 rows to T_DCR_CombineSaleData')
                         try:
-                            #sql.insert_data(connection, table_schema, Session, combine_table, log)
-                            sql.insert_data_mongo(combine_table, log)
-                            # sql.add_free_combine(combine_table)
+                            # sql.insert_data(connection, table_schema, Session, combine_table, log)
+                            sql.add_free_combine(combine_table)
                             # 清空列表
                             combine_table = list()
                             gc.collect()
-                            log.info('finish saving ...')
                         except Exception as e:
                             log.error('-----error---------')
                             log.error(e)
@@ -202,18 +191,16 @@ def main_function(begin_date):
             log.info('finish NO.%d buyer and continue...' % index_user)
 
     # 合并到数据库
-    gc.enable()
     if len(combine_table) > 0:
-        # sql.add_free_combine(combine_table)
+        sql.add_free_combine(combine_table)
         # sql.insert_data(connection, table_schema, Session, combine_table, log)
-        sql.insert_data_mongo(combine_table, log)
 
 
 if __name__ == "__main__":
     # 每个月的第一天计算前一个月的潜在销售组合
     x = time.localtime(time.time())
     if x.tm_mon-1 < 10:
-        month = '0'+str(x.tm_mon-3)
+        month = '0'+str(x.tm_mon-4)
     else:
         month = str(x.tm_mon-1)
     date_month = '{year}-{month}'.format(year=x.tm_year, month=month)
