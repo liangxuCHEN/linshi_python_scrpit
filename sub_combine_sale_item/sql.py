@@ -2,10 +2,26 @@
 import pymssql
 import settings
 import pandas as pd
+import pymongo
+from bson.code import Code
 
 """
 use pymssql connect to the sql server
 """
+MONGO_SERVER = 'mongodb://192.168.3.172:27017'
+
+
+class MongodbConn:
+
+    def __init__(self, server=MONGO_SERVER):
+        self.servers = server
+        self.conn = None
+
+    def connect(self):
+        return pymongo.MongoClient(self.servers)
+
+    def close(self):
+        return self.conn.disconnect()
 
 
 class Mssql:
@@ -323,6 +339,34 @@ def make_combine_sale_skucode_detail(log):
     add_combine_sale_skucode_detail(combine_sale_skucode_table)
 
 
+def count_combine_sale_skucode():
+    conn = MongodbConn().connect()
+    # res = conn.DCR.tmp_sub_combine.find({})
+    # print len(list(res))
+
+    map_fun = Code("""function () {
+        emit(this.CombineCode, {sales:this.SalesQty, buyUser:1})
+    }""")
+
+    reduce_fun = Code("""function (key, values) {
+        var sales = 0
+        var buyUser = 0
+         values.forEach(function(val){
+             sales += val.sales;
+             buyUser += val.buyUser;
+          });
+        return {'sales':sales, 'buyUser':buyUser}
+    }""")
+    conn.DCR.sub_combine_sale.map_reduce(map_fun, reduce_fun, "res", )
+    # r = res.find({"$where": """function(){
+    #   if(this.value.buyUser > 2){
+    #      return true;
+    #   } else{
+    #      return false
+    #   }}"""})
+    # for i in r:
+    #     print i
+
 if __name__ == "__main__":
     print 'begin'
     #data = {'RecordType': 1, 'CategoryURL': u'http://item.taobao.com/item.htm?id=538834474818', 'CategoryId': '1121', 'CategoryName': u'\u987e\u5bb6\u5bb6\u5c45\u65d7\u8230\u5e97', 'RecordDate': "20170101"}
@@ -331,6 +375,6 @@ if __name__ == "__main__":
     #update_hot_shop_plan(data)
     #res = combine_item_to_sql(data)
     #print get_sale_data_by_user('磊yoyo')
-    
+    count_combine_sale_skucode()
     print 'End'
 

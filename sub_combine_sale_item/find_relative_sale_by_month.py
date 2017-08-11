@@ -3,7 +3,6 @@ import pandas as pd
 import itertools
 import time
 import sql
-import os
 import logging
 
 log = None
@@ -101,6 +100,9 @@ def main_function(begin_date):
     combine_table = []
     log.info('there are %d sale records and %d buyer' % (len(df_sales), len(user_buy_items_sum)))
     for num_items in user_buy_items_sum:
+        if index_user < 1024:
+            index_user += 1
+            continue
         user = user_buy_items_sum.index[index_user]
         index_user += 1
         items = df_sales[df_sales['BuyUser'] == user]
